@@ -10,11 +10,12 @@ import           Language.Parse (interpret)
 import           Language.Types
 
 reduce :: Expr -> Expr
-reduce (App e1 e2) = reduce $ betaReduce e1 e2
-reduce e           = e
+reduce e@(App e1 e2) = let e' = betaReduce e1 e2
+                       in if e == e' then e else reduce e'
+reduce e             = e
 
 betaReduce :: Expr -> Expr -> Expr
-betaReduce (Lam v body) arg = substitute v body arg
+betaReduce (Lam v body) arg = substitute v arg body
 betaReduce e1           e2  = App e1 e2
 
 substitute :: Variable -> -- Bound variable of a Lambda

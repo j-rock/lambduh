@@ -7,4 +7,4 @@ type Variable = Text
 
 data Expr =  Var Variable
            | App Expr Expr
-           | Lam Variable Expr deriving (Show)
+           | Lam Variable Expr deriving (Eq, Show)
