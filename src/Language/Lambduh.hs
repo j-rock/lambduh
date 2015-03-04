@@ -16,6 +16,7 @@ reduce e             = e
 
 betaReduce :: Expr -> Expr -> Expr
 betaReduce (Lam v body) arg = substitute v arg body
+betaReduce (App e1 e2)  arg = betaReduce (reduce $ App e1 e2) arg
 betaReduce e1           e2  = App e1 e2
 
 substitute :: Variable -> -- Bound variable of a Lambda
