@@ -11,14 +11,6 @@ build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
 
-library
-  exposed-modules:     Language.Lambduh
-  hs-source-dirs:      src/
-  build-depends:       base >=4.7 && <4.8,
-                       text >=1.2,
-                       attoparsec >=0.12
-  default-language:    Haskell2010
-
 executable lambduh
   main-is:             Main.hs
   hs-source-dirs:      src/
