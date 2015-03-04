@@ -1,22 +1,40 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Language.Parse where
-    -- (
-    --   interpret
-    -- , interpretIO
-    -- ) where
+module Language.Parse
+  (
+    interpret
+  ) where
 
 import           Control.Applicative
 import           Data.Attoparsec.Text
 import qualified Data.Text            as T
 import           Language.Types
 
+type ErrorString = String
+
+
+{-
+    interpret tries to turn a String into an Expr.
+
+    Expr: var or lambda or app
+
+    identifier: [:alpha:][:alpha: | :digit: | _ ]*
+            e.g. a, aa, a1, a_, or a_11_aaa
+
+    Valid var: identifier or parenthesized once
+            e.g. a, (a), or (a_11_)
+
+    Valid lambda: \identifier -> Expr or parenthesized once
+            e.g. \x -> x, \x -> \y -> x, or \x -> (\y -> x)
+
+    Valid app: (Expr) Expr or parenthesized once
+            e.g. (x) y, ((x) y), or (\x -> x) x
+-}
+interpret :: String -> Either ErrorString Expr
+interpret = runTextParser parseExpr
 
 runTextParser :: Parser a -> String -> Either String a
 runTextParser p = parseOnly (p <* endOfInput) . T.pack
-
-interpret :: String -> Either String Expr
-interpret = runTextParser parseExpr
 
 parseExpr :: Parser Expr
 parseExpr = parseApp <|> parseVar <|> parseLam
@@ -29,20 +47,19 @@ identifier = do l <- letter
                 ls <- many (letter <|> digit <|> char '_')
                 return $ T.pack (l:ls)
 
+--so far, first term must be parenthesized lest we incur an infinite loop
 parseApp :: Parser Expr
 parseApp = withWithoutWSP $ do e1 <- withParen parseExpr
                                e2 <- parseExpr
                                return (App e1 e2)
 
 parseLam :: Parser Expr
-parseLam = withWithoutWSP $ do _    <- char '\\' -- backslash char ==> \
+parseLam = withWithoutWSP $ do _    <- char '\\'
                                var  <- identifier
-                               _    <- with ws ws $ string "->"
-                               body <- ws *> parseExpr
+                               _    <- withWS $ string "->"
+                               body <- parseExpr
                                return $ Lam var body
 
-ws :: Parser ()
-ws = skipWhile $ liftA2 (||) isHorizontalSpace isEndOfLine
 
 with :: Parser before -> Parser after -> Parser a -> Parser a
 with b a p = b *> p <* a
@@ -50,16 +67,21 @@ with b a p = b *> p <* a
 withWithout :: Parser before -> Parser after -> Parser a -> Parser a
 withWithout b a p = p <|> with b a p
 
-paren f = f (char '(' >> ws) (ws >> char ')')
+ws :: Parser ()
+ws = skipWhile $ liftA2 (||) isHorizontalSpace isEndOfLine
+
+withWS :: Parser a -> Parser a
+withWS = with ws ws
 
 withParen :: Parser a -> Parser a
-withParen = paren with
+withParen = with (char '(') (char ')') . withWS
 
 withWithoutParen :: Parser a -> Parser a
-withWithoutParen = paren withWithout
+withWithoutParen = withWithout (char '(') (char ')') . withWS
 
 withWithoutWSP :: Parser a -> Parser a
-withWithoutWSP = with ws ws . withWithoutParen
+withWithoutWSP = withWS . withWithoutParen
+
 
 
 succed = either (const False) (const True)
